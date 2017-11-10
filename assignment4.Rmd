@@ -16,7 +16,8 @@ The data you will be using comes from the Assistments online intelligent tutorin
 
 ## Start by uploading the data
 ```{r}
-D1 <- 
+D1 <- read.csv("Assistments-confidence.csv")
+D1[ ,'id'] <- NULL 
 
   #We won't need the id variable, so remove that.
 
@@ -27,13 +28,13 @@ D1 <-
 
 ```{r}
 #You can install the corrplot package to plot some pretty correlation matrices (sometimes called correlograms)
-
+install.packages("corrplot")
 library(corrplot)
 
 #Generate pairwise correlations
-COR <- cor(D1)
 
-corrplot(COR, order="AOE", method="circle", tl.pos="lt", type="upper",        
+COR <- cor(D1)
+corrplot(COR, order="AOE", method="circle", tl.pos="lt", type="upper",  
 tl.col="black", tl.cex=0.6, tl.srt=45, 
         addCoef.col="black", addCoefasPercent = TRUE,
         sig.level=0.50, insig = "blank")
@@ -44,8 +45,8 @@ tl.col="black", tl.cex=0.6, tl.srt=45,
 ## Create a new data frame with the mean_correct variables removed
 
 ```{r}
-D2 <- 
-
+D2 <- D1
+D2[ , 'mean_correct'] <- NULL
 #The, scale and center your data for easier interpretation
 D2 <- scale(D2, center = TRUE)
 ```
@@ -68,13 +69,29 @@ pca$sdev^2
 #A summary of our pca will give us the proportion of variance accounted for by each component
 
 summary(pca)
-
-#We can look at this to get an idea of which components we should keep and which we should drop
-
+##  In addition to variance, I also want to check the eigen value of each component to be sure
 plot(pca, type = "lines")
+
+#################### Eddie's own experiment with eigen value screeplot ##########################
+COR.D2 <- cor(D2)
+eigen.D2 <- eigen(COR.D2) #  component 1 ~ 3 have eigen value larger than 1.
+
+## use scree plot to verify
+
+library(nFactors)
+ap <- parallel(subject=nrow(D2),var=ncol(D2), rep=100,cent=.05)
+nS <- nScree(x=eigen.D2$values, aparallel=ap$eigen$qevpea)
+plotnScree(nS, main= "PCA screeplot")
+
+# We can look at this to get an idea of which components we should keep and which we should drop
+
+
 ```
 
 ## Think about which components you would drop and make a decision
+```{r}
+# Conclusioon: Based on the results of variance, eigen value and screeplot, I decided to keep component 1-4.
+```
 
 ## Part II
 
@@ -82,15 +99,24 @@ plot(pca, type = "lines")
 #Now, create a data frame of the transformed data from your pca.
 
 D3 <- as.data.frame(pca$x)
+D3[ , c("PC5","PC6")] <- NULL
 
 #Attach the variable "mean_correct" from your original data frame to D3.
 
 D4 <- cbind(D3, as.data.frame(D1$mean_correct))
+colnames(D4) <- c("PC1", "PC2", "PC3", "PC4", "mean_correct")
+
 
 #Now re-run your scatterplots and correlations between the transformed data and mean_correct. If you had dropped some components would you have lost important infomation about mean_correct?
 
-COR2 <- 
+## Ans: From the correlogram it can be seen that mean_correct have positive relation with PC1 (.28), PC2(.37), and PC4(.13), but not with PC3. This could mean that mean_correct could be explained by those 3 significant component but since I dropped two other components previously, I am not sure if those 2 dropped components could provide further explainatin for mean_correct.
 
+COR2 <- cor(D4)
+
+corrplot(COR2, order="AOE", method="circle", number.cex = 1, tl.pos="lt", type="upper",  
+tl.col="black", tl.cex=2.5, tl.srt=45, 
+        addCoef.col="black", addCoefasPercent = TRUE,
+        sig.level=0.50, insig = "blank")
 ```
 ## Now print out the eigenvectors (often called loadings) for the components you generated:
 
@@ -103,7 +129,9 @@ loadings <- abs(pca$rotation) #abs() will make all eigenvectors positive
 
 sweep(loadings, 2, colSums(loadings), "/") #sweep() computes each row as a proportion of the column. (There must be a way to do this with dplyr()?)
 
+
 #Now examine your components and try to come up with substantive descriptions of what some might represent?
+## Ans: By examing and comparing the factor loadings between question and component, we could see many questions have the issue of being cross-dimensional. For instance, prior_prob_count has similar (high) factor loading in component 2,3, and 4. This implies that this question may not be valid since it may pertain to various dimensions. Same issue also occur for problems_attempted, mean_hint, mean_attempt. On the other hand, question of prior_percent_correct and mean_confidence have rather clear and high factor loading (>.45) in component 2 and 3 repectively.This can imply that they are two potential dimensions of  "prior performance" and "confidence". However, in a practical sense, defining a dimension with only one single question may bear the risk of poor reliablility. 
 
 #You can generate a biplot to help you, though these can be a bit confusing. They plot the transformed data by the first two components. Therefore, the axes represent the direction of maximum variance. Then mapped onto this point cloud are the original directions of the variables, depicted as red arrows. It is supposed to provide a visualization of which variables "go together". Variables that possibly represent the same underlying construct point in the same direction.  
 
@@ -111,6 +139,56 @@ biplot(pca)
 
 #Calculate values for each student that represent these your composite variables and then create a new correlogram showing their relationship to mean_correct.
 
+## sorry Charles, but I didn't really understand this queston when it says "represent these your composite variables", I'd love to see the answer and learn about it. Thanks!
 ```
 # Part III  
 ## Also in this repository is a data set and codebook from Rod Martin, Patricia Puhlik-Doris, Gwen Larsen, Jeanette Gray, Kelly Weir at the University of Western Ontario about people's sense of humor. Can you perform a PCA on this data?
+```{r}
+D5 <- read.csv("humor_data.csv")
+# Remove the variables that "I" think irrelevant 
+D5 <- D5[, c(1:32)]
+D5 <- scale(D5, center = TRUE)
+pca.D5 <- prcomp(D5, scale = TRUE)
+
+pca.D5$sdev
+pca.D5$sdev^2
+summary(pca.D5)
+plot(pca.D5, type = "lines")
+
+COR.D5 <- cor(D5)
+eigen.D5 <- eigen(COR.D5) #  component 1 ~ 7 have eigen value larger than 1.
+
+## use scree plot to verify
+
+ap.d5 <- parallel(subject=nrow(D5),var=ncol(D5), rep=100,cent=.05)
+nS.d5 <- nScree(x=eigen.D5$values, aparallel=ap.d5$eigen$qevpea)
+plotnScree(nS.d5, main= "PCA screeplot")  #  keep component 1 ~ 7 
+
+
+top7.pca.data <- pca.D5$x[, 1:7]
+# check factor loadings
+top7.pca.eigenvector <- pca.D5$rotation[ , 1:7]
+loadings.D5 <- abs(top7.pca.eigenvector)
+sweep(loadings.D5, 2, colSums(loadings.D5), "/") 
+
+## It doesn't seem to have obvious dimensions based on the factor loadings. Just curious, I googled this paper and the authors ran a SEM on this questionnaire and they concluded with four factors. (sorry I cheated ...)
+
+
+top4.pca.data <- pca.D5$x[, 1:4]
+# check factor loadings
+top4.pca.eigenvector <- pca.D5$rotation[ , 1:4]
+loadings.D5.4com <- abs(top4.pca.eigenvector)
+sweep(loadings.D5.4com, 2, colSums(loadings.D5.4com), "/")
+
+## According to the original article, these four dimensions are: Affiliative humor, Self-Enhancing humor, Aggressive Humor, Self-defeating humor.(source url: http://www.sciencedirect.com/science/article/pii/S0092656602005342)
+```
+
+
+
+
+
+
+
+
+
+
