@@ -1,5 +1,5 @@
 ---
-title: "Principle Component Aanalysis"
+title: "Principle Component Aanalysis-Eddie Lin"
 output: html_document
 ---
 ## Data
